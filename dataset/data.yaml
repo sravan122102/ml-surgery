@@ -1,0 +1,7 @@
+names:
+- arthroscope
+- probe
+nc: 2
+path: C:/Users/sarav/OneDrive/Desktop/ai3/cit/dataset
+train: train/images
+val: valid/images

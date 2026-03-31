@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurgiScore — My Dashboard</title>
+    <meta name="description" content="Your personal surgical performance dashboard. Track improvements, view session history, and get AI-powered feedback.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #060b12; --bg2: #0b1520; --panel: #0f1d30; --border: #193352;
+            --cyan: #00d4ff; --green: #00ffb3; --amber: #ffc820; --red: #ff3d5a;
+            --purple: #b388ff; --orange: #ff8c42; --white: #ddeeff; --grey: #6b8ab0;
+            --radius: 16px;
+        }
+        body {
+            background: var(--bg); color: var(--white); font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(0,255,179,0.04) 0%, transparent 60%);
+        }
+
+        /* ── Top Nav ── */
+        .top-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 32px; border-bottom: 1px solid var(--border);
+            background: rgba(11,21,32,0.8); backdrop-filter: blur(12px);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .nav-brand {
+            font-family: 'JetBrains Mono', monospace; font-size: 13px;
+            color: var(--cyan); letter-spacing: 4px; text-transform: uppercase;
+        }
+        .nav-brand small { display: block; font-size: 10px; color: var(--grey); letter-spacing: 2px; margin-top: 2px; }
+        .nav-user {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .nav-user .user-info {
+            text-align: right;
+        }
+        .nav-user .user-name { font-size: 14px; font-weight: 600; }
+        .nav-user .user-email { font-size: 11px; color: var(--grey); }
+        .nav-user .avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 2px solid var(--cyan); object-fit: cover;
+        }
+        .nav-actions { display: flex; gap: 10px; }
+        .nav-btn {
+            padding: 8px 18px; border-radius: 8px; font-family: 'Inter', sans-serif;
+            font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
+            border: 1px solid var(--border); background: var(--panel); color: var(--white);
+            transition: all 0.3s;
+        }
+        .nav-btn:hover { border-color: var(--cyan); }
+        .nav-btn.primary { background: linear-gradient(135deg, var(--cyan), #0099cc); color: var(--bg); border: none; }
+        .nav-btn.danger { background: rgba(255,61,90,0.1); color: var(--red); border-color: rgba(255,61,90,0.3); }
+        .nav-btn.danger:hover { background: rgba(255,61,90,0.2); }
+
+        /* ── Container ── */
+        .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; position: relative; z-index: 1; }
+
+        /* ── Stats Cards ── */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden;
+        }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .stat-card:nth-child(1)::before { background: var(--cyan); }
+        .stat-card:nth-child(2)::before { background: var(--green); }
+        .stat-card:nth-child(3)::before { background: var(--amber); }
+        .stat-card:nth-child(4)::before { background: var(--purple); }
+        .stat-card .stat-label {
+            font-size: 11px; color: var(--grey); text-transform: uppercase;
+            letter-spacing: 1.5px; font-weight: 600; margin-bottom: 8px;
+        }
+        .stat-card .stat-value {
+            font-size: 36px; font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-card .stat-sub {
+            font-size: 12px; color: var(--grey); margin-top: 4px;
+        }
+
+        /* ── Two-column layout ── */
+        .two-col {
+            display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        /* ── Panel ── */
+        .panel {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px;
+        }
+        .panel-title {
+            font-size: 12px; color: var(--cyan); text-transform: uppercase;
+            letter-spacing: 1.5px; font-weight: 700; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ── Chart ── */
+        .chart-container { position: relative; height: 280px; }
+
+        /* ── Skill Breakdown ── */
+        .skill-row {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .skill-row:last-child { margin-bottom: 0; }
+        .skill-label {
+            font-size: 13px; font-weight: 500; min-width: 90px;
+        }
+        .skill-bar-bg {
+            flex: 1; height: 10px; background: rgba(255,255,255,0.05);
+            border-radius: 5px; overflow: hidden;
+        }
+        .skill-bar {
+            height: 100%; border-radius: 5px;
+            transition: width 1s ease-out;
+        }
+        .skill-value {
+            font-size: 14px; font-weight: 700; min-width: 40px; text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Improvement Indicators ── */
+        .improvement-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            margin-bottom: 32px;
+        }
+        .improvement-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .improvement-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .improvement-icon.up { background: rgba(0,255,179,0.1); color: var(--green); }
+        .improvement-icon.down { background: rgba(255,61,90,0.1); color: var(--red); }
+        .improvement-icon.neutral { background: rgba(107,138,176,0.1); color: var(--grey); }
+        .improvement-details .imp-label { font-size: 12px; color: var(--grey); }
+        .improvement-details .imp-value { font-size: 16px; font-weight: 700; }
+
+        /* ── Session History Table ── */
+        .session-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+        }
+        .session-table th {
+            text-align: left; padding: 12px 14px; font-size: 10px; color: var(--grey);
+            text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;
+            border-bottom: 1px solid var(--border);
+        }
+        .session-table td {
+            padding: 14px; font-size: 13px; border-bottom: 1px solid rgba(25,51,82,0.3);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .session-table tr:last-child td { border-bottom: none; }
+        .session-table tr:hover { background: rgba(0,212,255,0.03); }
+        .session-name {
+            font-family: 'Inter', sans-serif; font-weight: 600; color: var(--white);
+        }
+        .session-date {
+            font-family: 'Inter', sans-serif; font-size: 11px; color: var(--grey);
+        }
+        .grade-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 50%;
+            font-size: 12px; font-weight: 800;
+        }
+
+        /* ── AI Feedback ── */
+        .ai-feedback {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; margin-bottom: 32px;
+        }
+        .ai-feedback .comment {
+            font-size: 15px; line-height: 1.7; color: var(--white);
+        }
+
+        /* ── Empty State ── */
+        .empty-state {
+            text-align: center; padding: 80px 24px;
+        }
+        .empty-state .icon { font-size: 64px; margin-bottom: 20px; }
+        .empty-state h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .empty-state p { color: var(--grey); font-size: 15px; margin-bottom: 28px; }
+        .empty-state .btn {
+            display: inline-block; padding: 14px 32px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--cyan), #0099cc);
+            color: var(--bg); font-weight: 700; font-size: 15px;
+            text-decoration: none; transition: all 0.3s;
+        }
+        .empty-state .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,212,255,0.3); }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col { grid-template-columns: 1fr; }
+            .improvement-grid { grid-template-columns: 1fr; }
+            .top-nav { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+            .nav-user .user-info { display: none; }
+        }
+
+        /* Score color utility */
+        .sc-green { color: var(--green); }
+        .sc-cyan { color: var(--cyan); }
+        .sc-amber { color: var(--amber); }
+        .sc-red { color: var(--red); }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-brand">
+            SurgiScore
+            <small>My Performance Dashboard</small>
+        </div>
+        <div class="nav-user">
+            <div class="user-info">
+                <div class="user-name">{{ user.name }}</div>
+                <div class="user-email">{{ user.email }}</div>
+            </div>
+            {% if user.profile_pic %}
+            <img class="avatar" src="{{ user.profile_pic }}" alt="Profile" referrerpolicy="no-referrer">
+            {% else %}
+            <div class="avatar" style="background:var(--cyan);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--bg);font-size:16px;">
+                {{ user.name[0] | upper }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="nav-actions">
+            <a href="/" class="nav-btn primary">+ New Analysis</a>
+            <a href="/logout" class="nav-btn danger">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if results | length == 0 %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="icon">📊</div>
+            <h2>No Saved Results Yet</h2>
+            <p>Upload a surgical video, analyze your performance, and save the results to start tracking your progress.</p>
+            <a href="/" class="btn">Start Your First Analysis</a>
+        </div>
+
+        {% else %}
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Sessions</div>
+                <div class="stat-value" style="color:var(--cyan)">{{ results | length }}</div>
+                <div class="stat-sub">Total analyses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Best Score</div>
+                <div class="stat-value" style="color:var(--green)">{{ "%.1f" | format(best_score) }}</div>
+                <div class="stat-sub">Grade {{ best_grade }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Score</div>
+                <div class="stat-value" style="color:var(--amber)">{{ "%.1f" | format(avg_score) }}</div>
+                <div class="stat-sub">Across all sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Latest Grade</div>
+                <div class="stat-value" style="color:var(--purple)">{{ latest_grade }}</div>
+                <div class="stat-sub">{{ latest_date }}</div>
+            </div>
+        </div>
+
+        <!-- Performance Over Time + Skill Breakdown -->
+        <div class="two-col">
+            <div class="panel">
+                <div class="panel-title">📈 Performance Over Time</div>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">🎯 Average Skill Breakdown</div>
+                {% for metric, value, color in skill_breakdown %}
+                <div class="skill-row">
+                    <span class="skill-label">{{ metric }}</span>
+                    <div class="skill-bar-bg">
+                        <div class="skill-bar" style="width:{{ value }}%;background:{{ color }}"></div>
+                    </div>
+                    <span class="skill-value" style="color:{{ color }}">{{ "%.1f" | format(value) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Improvement Indicators -->
+        {% if results | length >= 2 %}
+        <div class="panel" style="margin-bottom:32px">
+            <div class="panel-title">📊 Improvement Since First Session</div>
+            <div class="improvement-grid">
+                {% for metric, diff in improvements %}
+                <div class="improvement-card">
+                    <div class="improvement-icon {{ 'up' if diff > 0 else ('down' if diff < 0 else 'neutral') }}">
+                        {{ "↑" if diff > 0 else ("↓" if diff < 0 else "—") }}
+                    </div>
+                    <div class="improvement-details">
+                        <div class="imp-label">{{ metric }}</div>
+                        <div class="imp-value" style="color:{{ 'var(--green)' if diff > 0 else ('var(--red)' if diff < 0 else 'var(--grey)') }}">
+                            {{ "+%.1f" | format(diff) if diff > 0 else "%.1f" | format(diff) }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Session History -->
+        <div class="panel" style="margin-bottom:32px">
+            <div class="panel-title">📋 Session History</div>
+            <table class="session-table">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Overall</th>
+                        <th>Stability</th>
+                        <th>Efficiency</th>
+                        <th>Precision</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in results %}
+                    <tr>
+                        <td>
+                            <div class="session-name">Session {{ results | length - loop.index0 }}</div>
+                            <div class="session-date">{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}</div>
+                        </td>
+                        <td style="color:{% if r.overall >= 80 %}var(--green){% elif r.overall >= 65 %}var(--cyan){% elif r.overall >= 50 %}var(--amber){% else %}var(--red){% endif %};font-weight:800">
+                            {{ "%.1f" | format(r.overall) }}
+                        </td>
+                        <td>{{ "%.1f" | format(r.stability) }}</td>
+                        <td>{{ "%.1f" | format(r.efficiency) }}</td>
+                        <td>{{ "%.1f" | format(r.precision) }}</td>
+                        <td>
+                            <span class="grade-badge" style="background:{% if r.overall >= 80 %}rgba(0,255,179,0.15);color:var(--green){% elif r.overall >= 65 %}rgba(0,212,255,0.15);color:var(--cyan){% elif r.overall >= 50 %}rgba(255,200,32,0.15);color:var(--amber){% else %}rgba(255,61,90,0.15);color:var(--red){% endif %}">
+                                {{ r.grade }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Latest AI Feedback -->
+        {% if latest_ai_comment %}
+        <div class="ai-feedback">
+            <div class="panel-title">🤖 Latest AI Feedback</div>
+            <p class="comment">{{ latest_ai_comment }}</p>
+        </div>
+        {% endif %}
+
+        {% endif %}
+    </div>
+
+    {% if results | length > 0 %}
+    <script>
+        // Performance Over Time Chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const sessions = {{ chart_data | tojson }};
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sessions.labels,
+                datasets: [
+                    {
+                        label: 'Overall',
+                        data: sessions.overall,
+                        borderColor: '#00ffb3',
+                        backgroundColor: 'rgba(0,255,179,0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#00ffb3',
+                    },
+                    {
+                        label: 'Stability',
+                        data: sessions.stability,
+                        borderColor: '#00d4ff',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#00d4ff',
+                    },
+                    {
+                        label: 'Precision',
+                        data: sessions.precision,
+                        borderColor: '#ffc820',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#ffc820',
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0, max: 100,
+                        grid: { color: 'rgba(25,51,82,0.5)' },
+                        ticks: { color: '#6b8ab0', font: { size: 10 } }
+                    },
+                    x: {
+                        grid: { color: 'rgba(25,51,82,0.3)' },
+                        ticks: { color: '#6b8ab0', font: { size: 10 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#ddeeff', font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' },
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

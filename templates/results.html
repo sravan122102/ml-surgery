@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurgiScore — Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #060b12; --bg2: #0b1520; --panel: #0f1d30; --border: #193352;
+            --cyan: #00d4ff; --green: #00ffb3; --amber: #ffc820; --red: #ff3d5a;
+            --purple: #b388ff; --white: #ddeeff; --grey: #6b8ab0;
+        }
+        body { background: var(--bg); color: var(--white); font-family: 'Inter', sans-serif; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+        .header { text-align: center; margin-bottom: 32px; }
+        .header .logo { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); letter-spacing: 4px; opacity: 0.7; }
+        .header h1 { font-size: 28px; font-weight: 800; color: var(--white); margin: 8px 0; }
+        .header .meta { font-size: 13px; color: var(--grey); }
+        .header .meta span { color: var(--cyan); font-weight: 600; }
+
+        .hero { text-align: center; margin-bottom: 32px; }
+        .hero .score-big {
+            font-size: 64px; font-weight: 800;
+        }
+        .hero .grade-badge {
+            display: inline-block; padding: 8px 28px; border-radius: 20px; font-size: 20px;
+            font-weight: 800; letter-spacing: 3px; margin-top: 8px;
+        }
+
+        .scores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+        .score-card {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+            padding: 20px; text-align: center;
+        }
+        .score-card .label { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .score-card .value { font-size: 28px; font-weight: 800; }
+        .score-card .sub { font-size: 10px; color: var(--grey); margin-top: 4px; }
+
+        .report-img { width: 100%; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 32px; }
+
+        .ai-section {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+            padding: 28px; margin-bottom: 32px;
+        }
+        .ai-section h3 { font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; }
+        .ai-section .comment { font-size: 15px; line-height: 1.7; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+        .info-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+        .info-card h3 { font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(25,51,82,0.5); }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .key { font-size: 13px; color: var(--grey); }
+        .info-row .val { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+        .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            padding: 12px 28px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--panel); color: var(--white); font-family: 'Inter', sans-serif;
+            font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.3s;
+        }
+        .btn:hover { border-color: var(--cyan); }
+        .btn.primary { background: linear-gradient(135deg, var(--cyan), #0099cc); color: var(--bg); border: none; }
+        .btn.save { background: linear-gradient(135deg, var(--green), #00cc88); color: var(--bg); border: none; }
+        .btn.save:hover { box-shadow: 0 8px 30px rgba(0,255,179,0.3); }
+
+        .save-msg {
+            text-align: center; margin-bottom: 16px; padding: 12px;
+            border-radius: 10px; font-size: 14px; font-weight: 600; display: none;
+        }
+        .save-msg.success { display: block; background: rgba(0,255,179,0.1); color: var(--green); border: 1px solid rgba(0,255,179,0.3); }
+        .save-msg.error { display: block; background: rgba(255,61,90,0.1); color: var(--red); border: 1px solid rgba(255,61,90,0.3); }
+
+        @media (max-width: 640px) {
+            .scores-grid { grid-template-columns: repeat(2, 1fr); }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">SURGISCORE · PERFORMANCE REPORT</div>
+            <h1>Single Camera Analysis</h1>
+            <p class="meta">
+                Tracking: <span>{{ result.tracking_method }}</span> ·
+                Frames: <span>{{ result.frames }}</span>
+            </p>
+        </header>
+
+        <div class="hero">
+            <div class="score-big" style="color:
+                {% if result.overall >= 80 %}var(--green)
+                {% elif result.overall >= 65 %}var(--cyan)
+                {% elif result.overall >= 50 %}var(--amber)
+                {% else %}var(--red){% endif %}">
+                {{ result.overall }}
+            </div>
+            <div>/ 100</div>
+            <div class="grade-badge" style="background:
+                {% if result.overall >= 80 %}rgba(0,255,179,0.15); color:var(--green)
+                {% elif result.overall >= 65 %}rgba(0,212,255,0.15); color:var(--cyan)
+                {% elif result.overall >= 50 %}rgba(255,200,32,0.15); color:var(--amber)
+                {% else %}rgba(255,61,90,0.15); color:var(--red){% endif %}">
+                GRADE {{ result.grade }}
+            </div>
+        </div>
+
+        <div class="scores-grid">
+            {% for label, value, weight in [
+                ('Stability', result.stability, '40%'),
+                ('Efficiency', result.efficiency, '30%'),
+                ('Precision', result.precision, '30%')
+            ] %}
+            <div class="score-card">
+                <div class="label">{{ label }}</div>
+                <div class="value" style="color:
+                    {% if value >= 80 %}var(--green)
+                    {% elif value >= 65 %}var(--cyan)
+                    {% elif value >= 50 %}var(--amber)
+                    {% else %}var(--red){% endif %}">{{ value }}</div>
+                <div class="sub">{{ weight }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <img class="report-img" src="/report/{{ job_id }}" alt="Performance Report" loading="lazy">
+
+        <div class="ai-section">
+            <h3>🤖 AI Mentor Feedback</h3>
+            <p class="comment">{{ result.ai_comment }}</p>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Raw Metrics</h3>
+                <div class="info-row"><span class="key">Jitter Mean</span><span class="val">{{ result.jitter_mean }} px</span></div>
+                <div class="info-row"><span class="key">Speed Mean</span><span class="val">{{ result.speed_mean }} px/s</span></div>
+                <div class="info-row"><span class="key">Path Ratio</span><span class="val">{{ result.path_ratio }}x</span></div>
+                <div class="info-row"><span class="key">Total Path</span><span class="val">{{ result.total_path }} px</span></div>
+                <div class="info-row"><span class="key">Filtered Jumps</span><span class="val">{{ result.filtered_jumps }}</span></div>
+            </div>
+            <div class="info-card">
+                <h3>Detection Stats</h3>
+                <div class="info-row"><span class="key">Method</span><span class="val">{{ result.tracking_method }}</span></div>
+                <div class="info-row"><span class="key">Total Frames</span><span class="val">{{ result.frames }}</span></div>
+                <div class="info-row"><span class="key">Scope Detections</span><span class="val">{{ result.scope_detections }}</span></div>
+                <div class="info-row"><span class="key">Probe Detections</span><span class="val">{{ result.probe_detections }}</span></div>
+            </div>
+        </div>
+
+        {% if result.previous %}
+        <div class="info-card" style="margin-bottom:32px">
+            <h3>vs Previous Attempt</h3>
+            {% for metric in ['stability', 'efficiency', 'precision', 'overall'] %}
+            {% set curr = result[metric] %}
+            {% set prev = result.previous[metric] %}
+            {% set diff = curr - prev %}
+            <div class="info-row">
+                <span class="key">{{ metric | title }}</span>
+                <span class="val" style="color:{% if diff > 0 %}var(--green){% elif diff < 0 %}var(--red){% else %}var(--grey){% endif %}">
+                    {{ curr }} ({% if diff > 0 %}+{% endif %}{{ "%.1f"|format(diff) }})
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div id="save-msg" class="save-msg"></div>
+
+        <div class="actions">
+            <a href="/" class="btn primary">↩ Analyze Another</a>
+            <button class="btn save" id="btn-save" onclick="saveResult()">💾 Save Result</button>
+            <a href="/report/{{ job_id }}" class="btn" target="_blank">📄 Full Report</a>
+            {% if is_logged_in %}
+            <a href="/my-dashboard" class="btn">📊 My Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        async function saveResult() {
+            const btn = document.getElementById('btn-save');
+            const msg = document.getElementById('save-msg');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const res = await fetch('/save-result/{{ job_id }}', { method: 'POST' });
+
+                if (res.status === 401 || res.redirected) {
+                    // Not logged in — redirect to login
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.redirect) {
+                    msg.className = 'save-msg success';
+                    msg.textContent = '✅ ' + data.message;
+                    setTimeout(() => window.location.href = data.redirect, 1500);
+                } else if (data.error) {
+                    msg.className = 'save-msg error';
+                    msg.textContent = '❌ ' + data.error;
+                    btn.disabled = false;
+                    btn.textContent = '💾 Save Result';
+                }
+            } catch (err) {
+                // Likely redirected to login page (HTML response)
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+</html>

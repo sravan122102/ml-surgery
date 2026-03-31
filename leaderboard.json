@@ -1,0 +1,62 @@
+[
+  {
+    "job_id": "78a0c452",
+    "name": "saravanakumar",
+    "level": "beginner",
+    "overall": 57.7,
+    "stability": 100.0,
+    "efficiency": 82.6,
+    "precision": 0.0,
+    "smoothness": 35.1,
+    "grade": "C",
+    "mode": "single"
+  },
+  {
+    "job_id": "b7c1f427",
+    "name": "ARUN",
+    "level": "intermediate",
+    "overall": 55.2,
+    "stability": 100.0,
+    "efficiency": 84.0,
+    "precision": 0.0,
+    "smoothness": 21.1,
+    "grade": "C",
+    "mode": "single"
+  },
+  {
+    "job_id": "c98ad67b",
+    "name": "saravanakumar",
+    "level": "beginner",
+    "overall": 54.0,
+    "stability": 100.0,
+    "efficiency": 81.8,
+    "precision": 0.0,
+    "smoothness": 17.9,
+    "grade": "C",
+    "mode": "single"
+  },
+  {
+    "job_id": "b2ccd8b8",
+    "name": "Anonymous",
+    "level": "expert",
+    "overall": 51.4,
+    "stability": 94.1,
+    "efficiency": 82.4,
+    "precision": 0.0,
+    "smoothness": 12.8,
+    "grade": "C",
+    "mode": "single"
+  },
+  {
+    "job_id": "a863614a",
+    "name": "Anonymous",
+    "level": "beginner",
+    "overall": 51.1,
+    "stability": 93.5,
+    "efficiency": 82.3,
+    "precision": 0.0,
+    "smoothness": 12.5,
+    "grade": "C",
+    "mode": "single"
+  }
+]

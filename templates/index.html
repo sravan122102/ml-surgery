@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurgiScore v4.0 — AI Surgical Analyzer</title>
+    <meta name="description" content="AI-powered surgical performance analyzer using advanced computer vision.">
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #03070b;
+            --cyan: #00d4ff;
+            --cyan-glow: rgba(0, 212, 255, 0.4);
+            --green: #00ffb3;
+            --green-glow: rgba(0, 255, 179, 0.3);
+            --purple: #9d4edd;
+            --white: #ffffff;
+            --text-muted: #8b9fb8;
+            --glass-bg: rgba(13, 22, 35, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--white);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Ambient Dynamic Background Glows */
+        body::before {
+            content: ''; position: fixed; top: -10%; left: -10%; width: 50%; height: 50%;
+            background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 60%);
+            filter: blur(80px); opacity: 0.5; z-index: 0; pointer-events: none;
+            animation: pulse-slow 8s infinite alternate;
+        }
+        body::after {
+            content: ''; position: fixed; bottom: -10%; right: -10%; width: 50%; height: 50%;
+            background: radial-gradient(circle, var(--purple) 0%, transparent 60%);
+            filter: blur(100px); opacity: 0.15; z-index: 0; pointer-events: none;
+        }
+
+        @keyframes pulse-slow {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.1); opacity: 0.6; }
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            padding: 60px 24px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── Header ── */
+        .header-actions {
+            width: 100%;
+            display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 40px;
+        }
+        
+        .header-btn {
+            padding: 10px 22px; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none;
+            border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--white);
+            backdrop-filter: blur(12px); font-size: 14px; transition: all 0.3s ease;
+        }
+        .header-btn:hover { border-color: var(--cyan); background: rgba(0, 212, 255, 0.1); transform: translateY(-2px); }
+        .header-btn.primary { background: linear-gradient(135deg, var(--cyan), #0099cc); color: var(--bg); border: none; box-shadow: 0 4px 15px var(--cyan-glow); }
+        .header-btn.primary:hover { box-shadow: 0 8px 25px var(--cyan-glow); }
+
+        .header { text-align: center; margin-bottom: 50px; animation: fade-in-up 0.8s ease backwards; }
+        
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--cyan);
+            letter-spacing: 8px; text-transform: uppercase; margin-bottom: 16px; font-weight: 600;
+        }
+
+        h1 {
+            font-size: 56px; font-weight: 800; line-height: 1.1; margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff 10%, var(--cyan) 50%, var(--green) 90%);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle { font-size: 18px; color: var(--text-muted); font-weight: 400; line-height: 1.6; max-width: 600px; margin: 0 auto; }
+
+        /* ── Glassmorphism Upload Panel ── */
+        .upload-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: fade-in-up 1s ease 0.2s backwards;
+        }
+
+        .form-group { margin-bottom: 24px; }
+        .form-group label {
+            display: block; font-size: 12px; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%; padding: 14px 20px; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border); border-radius: 12px; color: var(--white);
+            font-family: 'Outfit', sans-serif; font-size: 16px; transition: all 0.3s;
+        }
+        .form-group input[type="text"]:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 15px var(--cyan-glow); background: rgba(0,212,255,0.05); }
+        .form-group input[type="text"]::placeholder { color: #4a5c73; }
+
+        /* ── Drop Zone ── */
+        .drop-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-md);
+            padding: 50px 24px;
+            text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 28px;
+            position: relative; overflow: hidden;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--cyan);
+            background: rgba(0, 212, 255, 0.05);
+            transform: scale(1.02);
+        }
+
+        .drop-zone .icon { font-size: 52px; margin-bottom: 16px; display: inline-block; transition: transform 0.3s; }
+        .drop-zone:hover .icon { transform: scale(1.1); }
+        .drop-zone .text { color: var(--white); font-size: 16px; font-weight: 500; }
+        .drop-zone .subtext { color: var(--text-muted); font-size: 12px; margin-top: 10px; font-weight: 400; }
+        .drop-zone .selected { color: var(--green); font-weight: 600; font-size: 18px; }
+
+        /* ── Submit Button ── */
+        .submit-btn {
+            width: 100%; padding: 18px; border: none; border-radius: 14px;
+            font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase; letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--cyan), #0066ff);
+            color: var(--white);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.2);
+            position: relative; overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .submit-btn:hover:not(:disabled)::before { left: 100%; }
+        .submit-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0, 212, 255, 0.4); }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: grayscale(1); }
+
+        /* ── Progress Loader ── */
+        .progress-section { display: none; text-align: center; padding: 50px 20px; }
+        .progress-section.active { display: block; animation: fade-in-up 0.5s ease backwards; }
+
+        .loader {
+            width: 60px; height: 60px; border-radius: 50%; display: inline-block; position: relative;
+            background: conic-gradient(from 0deg, transparent 0%, var(--cyan) 100%);
+            animation: spin 1s linear infinite; margin-bottom: 24px;
+        }
+        .loader::after { content: ''; position: absolute; inset: 4px; background: var(--glass-bg); border-radius: 50%; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .progress-text { font-size: 16px; color: var(--text-muted); font-weight: 400; }
+        .progress-text .status { color: var(--cyan); font-weight: 700; font-size: 20px; display: block; margin-bottom: 8px; letter-spacing: 1px;}
+
+        /* ── Feature Pillars ── */
+        .features-grid {
+            margin-top: 80px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; width: 100%;
+            animation: fade-in-up 1.2s ease 0.4s backwards;
+        }
+
+        .feature-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
+            border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 32px 24px;
+            text-align: center; transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent); opacity: 0; transition: opacity 0.3s;
+        }
+        .feature-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.05); }
+        .feature-card:hover::before { opacity: 1; }
+        
+        .feature-card .f-icon { font-size: 36px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .feature-card h3 { font-size: 16px; color: var(--white); font-weight: 700; margin-bottom: 12px; }
+        .feature-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; font-weight: 300; }
+
+        /* ── Error ── */
+        .error-msg {
+            background: rgba(255,61,90,0.1); border: 1px solid rgba(255,61,90,0.3);
+            border-radius: 12px; padding: 16px 20px; color: #ff6b81; font-size: 14px;
+            margin-bottom: 24px; width: 100%; max-width: 700px; display: none; text-align: center;
+        }
+        .error-msg.visible { display: block; animation: fade-in-up 0.3s ease; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 40px; }
+            .features-grid { grid-template-columns: 1fr; }
+            .header-actions { justify-content: center; }
+            .upload-panel { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Actions -->
+        <div class="header-actions">
+            {% if user %}
+                <a href="/my-dashboard" class="header-btn primary">Dashboard</a>
+                <a href="/logout" class="header-btn">Sign Out</a>
+            {% else %}
+                <a href="/login" class="header-btn">Sign In</a>
+            {% endif %}
+        </div>
+
+        <header class="header">
+            <div class="logo">SurgiScore 4.0</div>
+            <h1>The Future of Surgical Mentorship</h1>
+            <p class="subtitle">Upload your arthroscopic procedure video for instant, objective clinical grading and AI-driven technique feedback.</p>
+        </header>
+
+        <div class="error-msg" id="error-display"></div>
+
+        <!-- Glassmorphism Upload -->
+        <div class="upload-panel active" id="panel-single">
+            <form id="form-single" onsubmit="submitSingle(event)">
+                <div class="form-group">
+                    <label>Surgeon Profile (Name)</label>
+                    <input type="text" name="name" placeholder="E.g. Dr. Jane Doe" id="name-single">
+                </div>
+
+                <div class="drop-zone" id="drop-single" onclick="document.getElementById('file-single').click()">
+                    <div class="icon">🎥</div>
+                    <div class="text" id="drop-single-text">Drag & drop your surgical footage here</div>
+                    <div class="subtext">Supports MP4, AVI, MOV · Up to 200 MB</div>
+                    <input type="file" id="file-single" accept=".mp4,.avi,.mov" hidden>
+                </div>
+
+                <button type="submit" class="submit-btn" id="btn-single" disabled>
+                    Analyze Footage
+                </button>
+            </form>
+        </div>
+
+        <!-- Progress State -->
+        <div class="progress-section" id="progress">
+            <div class="loader"></div>
+            <p class="progress-text">
+                <span class="status" id="progress-status">Processing</span>
+                <span id="progress-detail">Executing computer vision tracking...</span>
+            </p>
+        </div>
+
+        <!-- Final Clean Pillars -->
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="f-icon">👁️</div>
+                <h3>YOLOv8 Vision</h3>
+                <p>State-of-the-art neural networks instantly map tool trajectories with sub-millimeter precision.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-icon">📉</div>
+                <h3>Clinical Metrics</h3>
+                <p>Objective sub-scores for Stability, Efficiency, and Precision replace subjective grading heuristics.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-icon">🧠</div>
+                <h3>AI Mentor Feedback</h3>
+                <p>Context-aware generative AI formulates actionable drills customized entirely to your weakest metric.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const fileSingle = document.getElementById('file-single');
+        const dropSingle = document.getElementById('drop-single');
+
+        if (fileSingle && dropSingle) {
+            fileSingle.addEventListener('change', () => {
+                if (fileSingle.files.length) {
+                    document.getElementById('drop-single-text').innerHTML =
+                        `<span class="selected">🎬 ${fileSingle.files[0].name}</span>`;
+                    document.getElementById('btn-single').disabled = false;
+                }
+            });
+
+            dropSingle.addEventListener('dragover', e => { e.preventDefault(); dropSingle.classList.add('dragover'); });
+            dropSingle.addEventListener('dragleave', () => dropSingle.classList.remove('dragover'));
+            dropSingle.addEventListener('drop', e => {
+                e.preventDefault();
+                dropSingle.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    fileSingle.files = e.dataTransfer.files;
+                    fileSingle.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-display');
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+
+        function hideError() {
+            document.getElementById('error-display').classList.remove('visible');
+        }
+
+        function showProgress(detail) {
+            document.querySelector('.upload-panel.active').style.display = 'none';
+            document.querySelector('.features-grid').style.display = 'none';
+            document.getElementById('progress').classList.add('active');
+            document.getElementById('progress-detail').textContent = detail || 'Analyzing surgical performance...';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function pollStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch('/status/' + jobId);
+                    const data = await res.json();
+                    document.getElementById('progress-status').textContent =
+                        data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+                    if (data.status === 'done') {
+                        clearInterval(interval);
+                        window.location.href = '/results/' + jobId;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        document.getElementById('progress').classList.remove('active');
+                        document.querySelector('.upload-panel').style.display = 'block';
+                        document.querySelector('.features-grid').style.display = 'grid';
+                        showError(data.error || 'Analysis failed. Please try again.');
+                    }
+                } catch (e) {
+                    console.error('Poll error:', e);
+                }
+            }, 2000);
+        }
+
+        async function submitSingle(e) {
+            e.preventDefault();
+            hideError();
+            if (!fileSingle.files.length) return;
+            
+            const form = new FormData();
+            form.append('video', fileSingle.files[0]);
+            form.append('name', document.getElementById('name-single').value || 'Anonymous');
+
+            showProgress('Running YOLOv8 inference & calculating clinical metrics...');
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: form });
+                const data = await res.json();
+                if (data.error) { 
+                    showError(data.error); 
+                    document.getElementById('progress').classList.remove('active');
+                    document.querySelector('.upload-panel').style.display = 'block';
+                    document.querySelector('.features-grid').style.display = 'grid';
+                    return; 
+                }
+                pollStatus(data.job_id);
+            } catch (err) {
+                document.getElementById('progress').classList.remove('active');
+                document.querySelector('.upload-panel').style.display = 'block';
+                document.querySelector('.features-grid').style.display = 'grid';
+                showError('Network error uploading file. Ensure the backend is running.');
+            }
+        }
+    </script>
+</body>
+</html>
